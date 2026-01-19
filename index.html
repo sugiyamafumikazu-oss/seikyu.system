@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>請求書発行システム 操作マニュアル SPA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #f3f4f6; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .step-card { transition: all 0.3s ease; }
+        .step-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        .active-role { background-color: #3b82f6; color: white; }
+        .inactive-role { background-color: white; color: #4b5563; }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            height: 250px;
+        }
+        
+        /* Flowchart Connector Lines */
+        .flow-line {
+            position: absolute;
+            background-color: #e5e7eb;
+            z-index: 0;
+        }
+        .flow-line.vertical { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+        .flow-line.horizontal { height: 2px; width: 100%; top: 50%; transform: translateY(-50%); }
+
+        .highlight-pulse {
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+    </style>
+    <!-- Chosen Palette: Tailwind Slate & Blue (Minimalistic, Professional, Trustworthy) -->
+    <!-- Application Structure Plan: 
+         1. Header: System Title & Role Switcher (Accounting/Sales).
+         2. System Access: Quick Links to Spreadsheets.
+         3. Workflow Map: Interactive flow steps. Clicking steps updates the "Detail View" panel.
+         4. Feature Demo: Success Fee Calculator & Batch/Individual Toggle simulation.
+         5. Footer: Support info.
+         Rationale: Users need to understand the FLOW first, then the DETAILS. The role switcher filters the flow to reduce cognitive load. 
+    -->
+    <!-- Visualization & Content Choices:
+         - Workflow: HTML Grid with connecting lines. Clear visual hierarchy.
+         - Success Fee: Interactive Input Form + Chart.js Pie Chart to visualize the fee portion vs total.
+         - Icons: FontAwesome for visual cues (File, Check, Email).
+         - Confirmation: NO SVG graphics used directly (using FontAwesome). NO Mermaid JS used.
+    -->
+</head>
+<body class="text-slate-800">
+
+    <!-- Navigation / Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i class="fas fa-file-invoice-dollar text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-slate-800">請求書発行システム <span class="text-blue-600">操作マニュアル</span></h1>
+            </div>
+            
+            <!-- Role Switcher -->
+            <div class="flex bg-slate-100 p-1 rounded-lg">
+                <button id="btn-accounting" onclick="setRole('accounting')" class="px-4 py-2 rounded-md text-sm font-medium transition-colors active-role shadow-sm">
+                    <i class="fas fa-calculator mr-2"></i>経理担当
+                </button>
+                <button id="btn-sales" onclick="setRole('sales')" class="px-4 py-2 rounded-md text-sm font-medium transition-colors inactive-role">
+                    <i class="fas fa-user-tie mr-2"></i>営業担当
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- Intro Section -->
+        <section class="text-center max-w-3xl mx-auto">
+            <h2 class="text-3xl font-bold mb-4">業務フローと操作ガイド</h2>
+            <p class="text-slate-600 mb-8">
+                本システムは、Googleスプレッドシートと連携し、請求書の作成から稟議、送付までを効率化します。<br>
+                担当業務に合わせて、以下のフローを確認してください。
+            </p>
+            
+            <!-- System Access Cards -->
+            <div class="grid md:grid-cols-2 gap-6 text-left">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-colors cursor-pointer group" onclick="window.open('#', '_blank')"> <!-- Placeholder Link -->
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-green-100 text-green-600 p-3 rounded-lg group-hover:bg-green-600 group-hover:text-white transition-colors">
+                            <i class="fas fa-table text-2xl"></i>
+                        </div>
+                        <i class="fas fa-external-link-alt text-slate-400 group-hover:text-blue-500"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">請求書管理スプレッドシート</h3>
+                    <p class="text-sm text-slate-500">システム本体・マスタ管理・データ入力はこちら。</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-colors cursor-pointer group" onclick="window.open('https://docs.google.com/spreadsheets/d/1YKFc6-V-Tjp-UC5haGrhIoc_Kf0WW2R5t9WWd8FqnlI/edit', '_blank')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-purple-100 text-purple-600 p-3 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                            <i class="fas fa-file-signature text-2xl"></i>
+                        </div>
+                        <i class="fas fa-external-link-alt text-slate-400 group-hover:text-blue-500"></i>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">稟議用スプレッドシート</h3>
+                    <p class="text-sm text-slate-500">承認・決裁・PDF確認はこちら。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Workflow Map -->
+        <section class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-lg text-slate-700">
+                    <i class="fas fa-project-diagram mr-2 text-blue-500"></i>業務プロセスマップ
+                </h3>
+                <span class="text-xs font-mono bg-slate-200 text-slate-600 px-2 py-1 rounded">Stepをクリックして詳細を表示</span>
+            </div>
+
+            <div class="flex flex-col lg:flex-row h-[800px] lg:h-[600px]">
+                <!-- Flowchart Area -->
+                <div class="lg:w-1/2 p-8 bg-slate-50 relative overflow-y-auto">
+                    <div class="flex flex-col gap-8 relative h-full">
+                        <!-- Connecting Line -->
+                        <div class="absolute left-8 top-8 bottom-8 w-1 bg-slate-200 rounded hidden lg:block ml-4"></div>
+
+                        <!-- Step 1: Prep -->
+                        <div class="relative z-10 flex items-start gap-4 cursor-pointer group step-node" data-role="accounting" onclick="showDetail('step1')">
+                            <div class="w-10 h-10 rounded-full bg-white border-2 border-blue-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                <span class="text-blue-600 font-bold">1</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full group-hover:border-blue-400 transition-colors">
+                                <h4 class="font-bold text-slate-800">マスタデータ整備</h4>
+                                <p class="text-xs text-slate-500 mt-1">#顧客マスタ / #請求マスタ</p>
+                                <span class="inline-block px-2 py-0.5 mt-2 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">経理</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Input -->
+                        <div class="relative z-10 flex items-start gap-4 cursor-pointer group step-node" data-role="accounting" onclick="showDetail('step2')">
+                            <div class="w-10 h-10 rounded-full bg-white border-2 border-blue-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                <span class="text-blue-600 font-bold">2</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full group-hover:border-blue-400 transition-colors">
+                                <h4 class="font-bold text-slate-800">請求データ入力 (Webフォーム)</h4>
+                                <p class="text-xs text-slate-500 mt-1">通常 / 成功報酬の入力</p>
+                                <span class="inline-block px-2 py-0.5 mt-2 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">経理</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Create -->
+                        <div class="relative z-10 flex items-start gap-4 cursor-pointer group step-node" data-role="accounting" onclick="showDetail('step3')">
+                            <div class="w-10 h-10 rounded-full bg-white border-2 border-blue-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                <span class="text-blue-600 font-bold">3</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full group-hover:border-blue-400 transition-colors">
+                                <h4 class="font-bold text-slate-800">請求書作成 & 稟議回付</h4>
+                                <p class="text-xs text-slate-500 mt-1">一括作成 / 個別作成</p>
+                                <span class="inline-block px-2 py-0.5 mt-2 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">経理</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Check (Sales) -->
+                        <div class="relative z-10 flex items-start gap-4 cursor-pointer group step-node" data-role="sales" onclick="showDetail('step4')">
+                            <div class="w-10 h-10 rounded-full bg-white border-2 border-green-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                <span class="text-green-600 font-bold">4</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full group-hover:border-green-400 transition-colors">
+                                <h4 class="font-bold text-slate-800">内容確認 & 承認</h4>
+                                <p class="text-xs text-slate-500 mt-1">稟議シート / PDF確認</p>
+                                <span class="inline-block px-2 py-0.5 mt-2 rounded-full bg-green-100 text-green-800 text-xs font-bold">営業</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Send -->
+                        <div class="relative z-10 flex items-start gap-4 cursor-pointer group step-node" data-role="accounting" onclick="showDetail('step5')">
+                            <div class="w-10 h-10 rounded-full bg-white border-2 border-blue-500 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                <span class="text-blue-600 font-bold">5</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full group-hover:border-blue-400 transition-colors">
+                                <h4 class="font-bold text-slate-800">決裁 & メール送信</h4>
+                                <p class="text-xs text-slate-500 mt-1">自動メール送信機能</p>
+                                <span class="inline-block px-2 py-0.5 mt-2 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">経理</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Pane -->
+                <div class="lg:w-1/2 p-8 bg-white border-l border-slate-200 overflow-y-auto" id="detail-pane">
+                    <!-- Default Content -->
+                    <div class="h-full flex flex-col items-center justify-center text-slate-400">
+                        <i class="fas fa-mouse-pointer text-4xl mb-4 animate-bounce"></i>
+                        <p>左側のステップをクリックして<br>詳細を確認してください</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Simulators -->
+        <div class="grid lg:grid-cols-2 gap-8">
+            
+            <!-- Success Fee Calculator Demo -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                        <i class="fas fa-percentage text-orange-500 mr-2"></i>成功報酬計算シミュレーター
+                    </h3>
+                    <p class="text-sm text-slate-500">入力フォームの「成功報酬」機能の動作を確認できます。</p>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">計算タイプ</label>
+                            <select id="sim-type" class="w-full border-slate-300 rounded text-sm p-2" onchange="updateSimLabels()">
+                                <option value="normal">通常 (数量×単価)</option>
+                                <option value="percent" selected>成功報酬 (金額×%)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">品名</label>
+                            <input type="text" value="助成金申請" class="w-full border-slate-300 rounded text-sm p-2 border">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label id="lbl-val1" class="block text-xs font-bold text-slate-500 mb-1">対象金額 (円)</label>
+                            <input id="sim-val1" type="number" value="1000000" class="w-full border-slate-300 rounded text-sm p-2 border" oninput="runSimulation()">
+                        </div>
+                        <div>
+                            <label id="lbl-val2" class="block text-xs font-bold text-slate-500 mb-1">料率 (%)</label>
+                            <input id="sim-val2" type="number" value="20" class="w-full border-slate-300 rounded text-sm p-2 border" oninput="runSimulation()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Preview -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-800 mb-2 uppercase">請求書への登録イメージ</h4>
+                    <div class="flex justify-between items-center text-sm mb-1">
+                        <span class="text-slate-600">品名:</span>
+                        <span id="res-name" class="font-mono font-bold">助成金申請 (1,000,000円の20%)</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm mb-1">
+                        <span class="text-slate-600">金額:</span>
+                        <span id="res-price" class="font-mono font-bold text-blue-600 text-lg">200,000 円</span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500 border-t border-blue-200 pt-2">
+                        <span class="font-bold">備考欄(自動入力):</span> <span id="res-remark">助成金申請計算根拠: 対象額 1,000,000円 × 20%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mode Selector Demo -->
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                        <i class="fas fa-layer-group text-purple-500 mr-2"></i>一括 vs 個別作成モード
+                    </h3>
+                    <p class="text-sm text-slate-500">「PDF作成」ボタンを押した後の挙動の違いです。</p>
+                </div>
+
+                <div class="flex gap-2 mb-4">
+                    <button onclick="switchModeDemo('batch')" class="flex-1 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm font-bold">一括モード (月末)</button>
+                    <button onclick="switchModeDemo('single')" class="flex-1 py-2 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-sm font-bold">個別モード (急ぎ)</button>
+                </div>
+
+                <div id="mode-demo-area" class="h-48 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center relative overflow-hidden">
+                    <!-- Dynamic Content by JS -->
+                    <p class="text-slate-400 text-sm">ボタンを押してシミュレーション</p>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-300 py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="mb-2">請求書発行システム 操作マニュアル</p>
+            <p class="text-xs text-slate-500">Designed for internal use only.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Content Data
+        const stepDetails = {
+            step1: {
+                title: "1. 事前準備：マスタデータの整備",
+                content: `
+                    <div class="space-y-4">
+                        <p class="font-bold text-slate-700">毎月の請求処理前に必ず確認してください。</p>
+                        <ul class="list-disc pl-5 space-y-2 text-sm">
+                            <li><strong class="text-blue-600">#顧客マスタ:</strong> 新規顧客の追加、住所変更。<br><span class="text-red-500 font-bold text-xs">重要: I列にメールアドレスが入っていないと送信できません！</span></li>
+                            <li><strong class="text-blue-600">#請求マスタ:</strong> 顧問料や単価の変更。</li>
+                        </ul>
+                    </div>
+                `
+            },
+            step2: {
+                title: "2. 請求データの入力",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm">メニューの<span class="bg-slate-200 px-2 py-1 rounded text-xs font-mono">入力フォームを開く</span>から行います。</p>
+                        <ol class="list-decimal pl-5 space-y-3 text-sm">
+                            <li><strong>基本情報:</strong> 対象年月と事業所を選択。</li>
+                            <li><strong>固定項目:</strong> 自動表示されます。給与計算人数などを入力。</li>
+                            <li><strong>追加明細:</strong> 「＋明細を追加」ボタンを使用。
+                                <ul class="list-disc pl-4 mt-1 text-slate-600 text-xs">
+                                    <li>通常請求：数量×単価</li>
+                                    <li>成功報酬：金額×料率（自動計算されます）</li>
+                                </ul>
+                            </li>
+                            <li><strong>登録:</strong> 「保存しました」と出れば完了。</li>
+                        </ol>
+                    </div>
+                `
+            },
+            step3: {
+                title: "3. 請求書作成 & 稟議回付",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm">メニューの<span class="bg-slate-200 px-2 py-1 rounded text-xs font-mono">PDF作成＆稟議追加</span>を実行します。</p>
+                        <div class="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm">
+                            <p class="font-bold text-yellow-800 mb-1">質問されます：「一括作成しますか？」</p>
+                            <ul class="list-none space-y-2">
+                                <li>✅ <strong>はい (一括):</strong> 月末処理用。全員分を一気に作成します。</li>
+                                <li>✅ <strong>いいえ (個別):</strong> 急ぎ用。コードを入力して1社だけ作成します。</li>
+                            </ul>
+                        </div>
+                        <p class="text-xs text-slate-500">※作成後、稟議シートの最下行にデータが追加されます。</p>
+                    </div>
+                `
+            },
+            step4: {
+                title: "4. 内容確認 & 承認 (営業)",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm">稟議用スプレッドシートを確認してください。</p>
+                        <div class="bg-white border border-slate-200 p-3 rounded">
+                            <h5 class="font-bold text-xs text-slate-500 mb-2">確認ポイント</h5>
+                            <ul class="list-disc pl-5 space-y-1 text-sm">
+                                <li>F列「作成」にチェックが入っている行を見る。</li>
+                                <li>D列のリンクからPDFを開き、内容を確認。</li>
+                                <li>問題なければ <strong>G列「承認」</strong> にチェックを入れる。</li>
+                            </ul>
+                        </div>
+                        <p class="text-xs text-red-500">※間違いがある場合はチェックを入れず、経理へ修正依頼をしてください。</p>
+                    </div>
+                `
+            },
+            step5: {
+                title: "5. 決裁 & メール送信",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm">承認済みデータを顧客へ送信します。</p>
+                        <ol class="list-decimal pl-5 space-y-2 text-sm">
+                            <li>稟議シートで <strong>G列(承認)</strong> がチェックされているか確認。</li>
+                            <li><strong>H列(決裁)</strong> にチェックを入れる。</li>
+                            <li>メニューから<span class="bg-slate-200 px-2 py-1 rounded text-xs font-mono">【稟議】決裁済みメール送信</span>を実行。</li>
+                        </ol>
+                        <p class="text-xs text-slate-500">※送信完了後、J列に「送信済」と自動記載されます。</p>
+                    </div>
+                `
+            }
+        };
+
+        // Role Management
+        function setRole(role) {
+            const accBtn = document.getElementById('btn-accounting');
+            const salesBtn = document.getElementById('btn-sales');
+            const steps = document.querySelectorAll('.step-node');
+
+            if (role === 'accounting') {
+                accBtn.className = "px-4 py-2 rounded-md text-sm font-medium transition-colors active-role shadow-sm";
+                salesBtn.className = "px-4 py-2 rounded-md text-sm font-medium transition-colors inactive-role";
+            } else {
+                salesBtn.className = "px-4 py-2 rounded-md text-sm font-medium transition-colors bg-green-600 text-white shadow-sm";
+                accBtn.className = "px-4 py-2 rounded-md text-sm font-medium transition-colors inactive-role";
+            }
+
+            steps.forEach(step => {
+                const stepRole = step.getAttribute('data-role');
+                if (stepRole === role) {
+                    step.classList.remove('opacity-40', 'grayscale');
+                    step.classList.add('opacity-100', 'cursor-pointer');
+                } else {
+                    step.classList.add('opacity-40', 'grayscale');
+                    // Optional: remove pointer events if you want to strictly block interaction
+                    // step.classList.remove('cursor-pointer'); 
+                }
+            });
+        }
+
+        // Show Detail
+        function showDetail(stepId) {
+            const pane = document.getElementById('detail-pane');
+            const data = stepDetails[stepId];
+            
+            // Highlight animation
+            document.querySelectorAll('.step-node').forEach(el => el.classList.remove('highlight-pulse'));
+            event.currentTarget.classList.add('highlight-pulse');
+
+            pane.innerHTML = `
+                <div class="animate-fade-in-up">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-slate-800 border-b-2 border-blue-500 pb-2">${data.title}</h3>
+                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Details</span>
+                    </div>
+                    <div class="prose prose-sm text-slate-600">
+                        ${data.content}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Simulation Logic
+        function updateSimLabels() {
+            const type = document.getElementById('sim-type').value;
+            if(type === 'percent') {
+                document.getElementById('lbl-val1').innerText = '対象金額 (円)';
+                document.getElementById('lbl-val2').innerText = '料率 (%)';
+                document.getElementById('sim-val1').value = 1000000;
+                document.getElementById('sim-val2').value = 20;
+            } else {
+                document.getElementById('lbl-val1').innerText = '数量';
+                document.getElementById('lbl-val2').innerText = '単価';
+                document.getElementById('sim-val1').value = 1;
+                document.getElementById('sim-val2').value = 5000;
+            }
+            runSimulation();
+        }
+
+        function runSimulation() {
+            const type = document.getElementById('sim-type').value;
+            const val1 = parseFloat(document.getElementById('sim-val1').value) || 0;
+            const val2 = parseFloat(document.getElementById('sim-val2').value) || 0;
+            let price = 0;
+            let name = "品名";
+            let remark = "";
+
+            if (type === 'percent') {
+                price = Math.floor(val1 * (val2 / 100));
+                name = `品名 (${val1.toLocaleString()}円の${val2}%)`;
+                remark = `品名計算根拠: 対象額 ${val1.toLocaleString()}円 × ${val2}%`;
+            } else {
+                price = val2; // Logic in actual code: Qty is separate, but price displayed is Unit Price. Total is Qty*Price. Here simplifying display.
+                // Actually manual says: Qty=1, Price=CalcResult for Percent.
+                // For normal: Qty=Input, Price=Input.
+                name = "品名";
+                remark = ""; 
+            }
+
+            document.getElementById('res-name').innerText = name;
+            document.getElementById('res-price').innerText = price.toLocaleString() + " 円";
+            document.getElementById('res-remark').innerText = remark || "(なし)";
+        }
+
+        // Mode Demo Logic
+        function switchModeDemo(mode) {
+            const area = document.getElementById('mode-demo-area');
+            if (mode === 'batch') {
+                area.innerHTML = `
+                    <div class="flex items-center gap-2 animate-pulse">
+                        <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                        <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                        <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                        <span class="text-sm font-bold text-slate-600 ml-2">全員分を一括作成！</span>
+                    </div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="bg-white border rounded p-2 text-xs mb-2 shadow-sm">コード入力: <strong>7</strong></div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-file-pdf text-orange-500 text-3xl"></i>
+                            <span class="text-sm font-bold text-slate-600 ml-2">1社だけ急ぎで作成！</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize
+        runSimulation();
+        setRole('accounting');
+
+    </script>
+    
+    <!-- Animation Styles -->
+    <style>
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</body>
+</html>
